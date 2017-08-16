@@ -1,11 +1,3 @@
-"""
-This is a template algorithm on Quantopian for you to adapt and fill in.
-"""
-from quantopian.algorithm import attach_pipeline, pipeline_output
-from quantopian.pipeline import Pipeline
-from quantopian.pipeline.data.builtin import USEquityPricing
-from quantopian.pipeline.factors import AverageDollarVolume
-from quantopian.pipeline.filters.morningstar import Q1500US
 # ~~~~~~~~~~~~~~~~~~~~~~
 import numpy as np
 import statsmodels.api as sm
@@ -19,11 +11,10 @@ class ADF(object):
         self.p_value = None
         self.ten_perc_stat = None
         self.perc_stat = None
-        self.look_back = 60
         self.p_min = .0
-        slef.p_max = .2
+        self.p_max = .2
         
-	def apply_adf(self, time_series):
+    def apply_adf(self, time_series):
         self.p_value = ts.adfuller(time_series, 1)[1]
         self.ten_perc_stat = ts.adfuller(time_series, 1)[4]['10%']
         self.perc_stat = ts.adfuller(time_series, 1)[0]
@@ -38,9 +29,8 @@ class KPSS(object):
         self.p_value = None
         self.ten_perc_stat = None
         self.perc_stat = None
-        self.look_back = 60
         self.p_min = .0
-        slef.p_max = .2
+        self.p_max = .2
     
     
     def apply_kpss(self, time_series):
@@ -72,7 +62,7 @@ def half_life(time_series):
     model = sm.OLS(spread_ret,spread_lag2)
     res = model.fit()
     
-	half_life = round(-np.log(2) / res.params[1],0)
+    half_life = round(-np.log(2) / res.params[1],0)
     
     return half_life
 
@@ -83,10 +73,10 @@ def hurst(ts):
     lags = range(2, 100)
  
     # Calculate the array of the variances of the lagged differences
-    tau = [sqrt(std(subtract(ts[lag:], ts[:-lag]))) for lag in lags]
+    tau = [np.sqrt(np.std(np.subtract(ts[lag:], ts[:-lag]))) for lag in lags]
  
     # Use a linear fit to estimate the Hurst Exponent
-    poly = polyfit(log(lags), log(tau), 1)
+    poly = np.polyfit(log(lags), log(tau), 1)
  
     # Return the Hurst exponent from the polyfit output
     return poly[0]*2.0
@@ -95,43 +85,23 @@ def initialize(context):
     """
     Called once at the start of the algorithm.
     """   
+    context.assets = [sid(5061), sid(24)]
+    context.look_back = 60
     # Rebalance every day, 1 hour after market open.
     schedule_function(my_rebalance, date_rules.every_day(), time_rules.market_open(hours=1))
      
     # Record tracking variables at the end of each day.
     schedule_function(my_record_vars, date_rules.every_day(), time_rules.market_close())
+    
+    schedule_function(my_handle_data, date_rules.every_day(), time_rules.market_close(hours=1))
      
     # Create our dynamic stock selector.
-    attach_pipeline(make_pipeline(), 'my_pipeline')
-         
-def make_pipeline():
-    """
-    A function to create our dynamic stock selector (pipeline). Documentation on
-    pipeline can be found here: https://www.quantopian.com/help#pipeline-title
-    """
-    
-    # Base universe set to the Q500US
-    base_universe = Q1500US()
-
-    # Factor of yesterday's close price.
-    yesterday_close = USEquityPricing.close.latest
-     
-    pipe = Pipeline(
-        screen = base_universe,
-        columns = {
-            'close': yesterday_close,
-        }
-    )
-    return pipe
+    #attach_pipeline(make_pipeline(), 'my_pipeline')
  
 def before_trading_start(context, data):
     """
     Called every day before market open.
     """
-    context.output = pipeline_output('my_pipeline')
-  
-    # These are the securities that we are interested in trading each day.
-    context.security_list = context.output.index
      
 def my_assign_weights(context, data):
     """
@@ -151,8 +121,27 @@ def my_record_vars(context, data):
     """
     pass
  
-def handle_data(context,data):
+def my_handle_data(context,data):
     """
-    Called every minute.
+    Called every day.
     """
-    pass
+    stock_1 = context.assets[0]
+    stock_2 = context.assets[1]
+    if get_open_orders():
+        return
+            
+    prices = data.history([stock_1, stock_2], "price", 300, "1d")
+
+    try:
+        hedge = hedge_ratio(prices[stock_1], prices[stock_2])      
+    except ValueError as e:
+        log.debug(e)
+        return
+
+
+    log.info(hedge)
+        
+        
+        
+    # Record all the values calculated
+    record(hedge = hedge)
