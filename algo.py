@@ -1,3 +1,5 @@
+# Note to self: look into beta neutral instead of dollar neutral for choosing a pair
+
 # ~~~~~~~~~~~~~~~~~~~~~~
 import numpy as np
 import statsmodels.api as sm
@@ -9,19 +11,20 @@ class ADF(object):
     """Augmented Dickey–Fuller (ADF) unit root test"""
     def __init__(self):
         self.p_value = None
-        self.ten_perc_stat = None
+        self.five_perc_stat = None
         self.perc_stat = None
         self.p_min = .0
         self.p_max = .2
+        self.look_back = 50
         
     def apply_adf(self, time_series):
         self.p_value = ts.adfuller(time_series, 1)[1]
-        self.ten_perc_stat = ts.adfuller(time_series, 1)[4]['10%']
+        self.five_perc_stat = ts.adfuller(time_series, 1)[4]['5%']
         self.perc_stat = ts.adfuller(time_series, 1)[0]
         
     def use(self):
         # http://www.pythonforfinance.net/2016/05/09/python-backtesting-mean-reversion-part-2/
-        return (self.p_value > self.p_min) and (self.p_value < self.p_max) and (abs(self.perc_stat) > abs(self.ten_perc_stat))
+        return (self.p_value > self.p_min) and (self.p_value < self.p_max) and (self.perc_stat > self.five_perc_stat)
 
 class KPSS(object):
     """Kwiatkowski-Phillips-Schmidt-Shin (KPSS) stationarity tests"""
@@ -31,17 +34,18 @@ class KPSS(object):
         self.perc_stat = None
         self.p_min = .0
         self.p_max = .2
+        self.look_back = 50
     
     
     def apply_kpss(self, time_series):
         self.p_value = ts.adfuller(time_series, 1)[1]
-        self.ten_perc_stat = ts.adfuller(time_series, 1)[4]['10%']
+        self.five_perc_stat = ts.adfuller(time_series, 1)[4]['5%'] # possibly make this 10%
         self.perc_stat = ts.adfuller(time_series, 1)[0]
         
     def use(self):
-        return (self.p_value > self.p_min) and (self.p_value < self.p_max) and (abs(self.perc_stat) > abs(self.ten_perc_stat))
+        return (self.p_value > self.p_min) and (self.p_value < self.p_max) and (self.perc_stat > self.five_perc_stat)
         
-        
+# Look into using Kalman Filter to calculate the hedge ratio
 def hedge_ratio(Y, X):
     X = sm.add_constant(X)
     model = sm.OLS(Y, X).fit()
@@ -86,7 +90,10 @@ def initialize(context):
     Called once at the start of the algorithm.
     """   
     context.assets = [sid(5061), sid(24)]
-    context.look_back = 60
+    context.lookback = 40
+    context.z_back = 30
+    context.hedge_lag = 1
+    context.spread = np.array([])
     # Rebalance every day, 1 hour after market open.
     schedule_function(my_rebalance, date_rules.every_day(), time_rules.market_open(hours=1))
      
@@ -125,23 +132,53 @@ def my_handle_data(context,data):
     """
     Called every day.
     """
-    stock_1 = context.assets[0]
-    stock_2 = context.assets[1]
     if get_open_orders():
         return
-            
+    
+    # Get stock data
+    stock_1 = context.assets[0]
+    stock_2 = context.assets[1]        
     prices = data.history([stock_1, stock_2], "price", 300, "1d")
-
+    stock_1_P = prices[stock_1]
+    stock_2_P = prices[stock_2]
+    
+    # Get hedge ratio (look into using Kalman Filter)
     try:
-        hedge = hedge_ratio(prices[stock_1], prices[stock_2])      
+        hedge = hedge_ratio(stock_1_P, stock_2_P)      
     except ValueError as e:
-        log.debug(e)
+        #log.debug(e)
+        return    
+    # Wait until a day has passed
+    if context.hedge_lag > 0: 
+        context.prev_hedge = hedge
+        context.hedge_lag -= 1
         return
+    
+    # May need to switch stock_1/stock_2 places...95% sure this is the correct spread calculation
+    context.spread = np.append(context.spread, stock_1_P[-1] - context.prev_hedge * stock_2_P[-1]) 
+    spread_length = context.spread.size
+    
+    for stock in [stock_1_P, stock_2_P]:
+        adf = ADF()
+        kpss = KPSS()
+        
+        # Check if current window size is large enough
+        if (spread_length < adf.look_back) or (spread_length < kpss.look_back):
+            return
+        
+        adf.apply_adf(stock)
+        kpss.apply_kpss(stock)
+        
+        # Check if they are in fact a stationary (or possibly trend stationary...need to avoid this) time series
+        if (adf.use() and kpss.use()):
+            log.debug("Stationary")
+            #log.debug("ADF: {0}".format((adf.use())))
+            #log.debug("KPSS: {0}".format(kpss.use()))
+            return
+        
 
-
-    log.info(hedge)
         
         
-        
+    context.prev_hedge = hedge
     # Record all the values calculated
     record(hedge = hedge)
