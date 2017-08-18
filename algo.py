@@ -29,6 +29,7 @@ class ADF(object):
 class KPSS(object):
     """Kwiatkowski-Phillips-Schmidt-Shin (KPSS) stationarity tests"""
     def __init__(self):
+        Exception("Not implemented yet")
         self.p_value = None
         self.ten_perc_stat = None
         self.perc_stat = None
@@ -158,23 +159,23 @@ def my_handle_data(context,data):
     context.spread = np.append(context.spread, stock_1_P[-1] - context.prev_hedge * stock_2_P[-1]) 
     spread_length = context.spread.size
     
-    for stock in [stock_1_P, stock_2_P]:
-        adf = ADF()
-        kpss = KPSS()
-        
-        # Check if current window size is large enough
-        if (spread_length < adf.look_back) or (spread_length < kpss.look_back):
-            return
-        
-        adf.apply_adf(stock)
-        kpss.apply_kpss(stock)
-        
-        # Check if they are in fact a stationary (or possibly trend stationary...need to avoid this) time series
-        if (adf.use() and kpss.use()):
-            log.debug("Stationary")
-            #log.debug("ADF: {0}".format((adf.use())))
-            #log.debug("KPSS: {0}".format(kpss.use()))
-            return
+    # Check if current window size is large enough for adf and z score
+    if (spread_length < adf.look_back) or (spread_length < kpss.look_back):
+        return
+    
+    adf = ADF()
+    kpss = KPSS()
+    adf.apply_adf(spread)
+    #kpss.apply_kpss(stock)
+    
+    # Check if they are in fact a stationary (or possibly trend stationary...need to avoid this) time series
+    if !(adf.use()):
+        log.debug("Not Stationary")
+        #log.debug("ADF: {0}".format((adf.use())))
+        #log.debug("KPSS: {0}".format(kpss.use()))
+        return
+
+    z_score = (spreads[-1] - spreads.mean()) / spreads.std()
         
 
         
@@ -182,3 +183,4 @@ def my_handle_data(context,data):
     context.prev_hedge = hedge
     # Record all the values calculated
     record(hedge = hedge)
+    record(adf_p = adf.p_value)
