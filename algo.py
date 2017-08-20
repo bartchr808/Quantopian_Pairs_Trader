@@ -1,15 +1,14 @@
-# Note to self: look into beta neutral instead of dollar neutral for choosing a pair
-
-# ~~~~~~~~~~~~~~~~~~~~~~
 import numpy as np
 import statsmodels.api as sm
 import statsmodels.tsa.stattools as ts
 import pandas as pd
 
-
 # ~~~~~~~~~~~~~~~~~~~~~~ TESTS FOR FINDING PAIR TO TRADE ON ~~~~~~~~~~~~~~~~~~~~~~
 class ADF(object):
-    """Augmented Dickey–Fuller (ADF) unit root test"""
+    """
+    Augmented Dickey–Fuller (ADF) unit root test
+    Source: http://www.pythonforfinance.net/2016/05/09/python-backtesting-mean-reversion-part-2/
+    """
 
     def __init__(self):
         self.p_value = None
@@ -26,14 +25,14 @@ class ADF(object):
         self.perc_stat = model[0]
 
     def use_P(self):
-        # http://www.pythonforfinance.net/2016/05/09/python-backtesting-mean-reversion-part-2/
         return (self.p_value > self.p_min) and (self.p_value < self.p_max)
     
     def use_critical(self):
         return self.perc_stat > self.five_perc_stat
 
 
-"""    
+"""  
+# DEPRECATED
 class KPSS(object):
     #Kwiatkowski-Phillips-Schmidt-Shin (KPSS) stationarity tests
     def __init__(self):
@@ -56,8 +55,10 @@ class KPSS(object):
 
 
 class Half_Life(object):
-    """Half Life test from the Ornstein-Uhlenbeck process 
-    http://www.pythonforfinance.net/2016/05/09/python-backtesting-mean-reversion-part-2/"""
+    """
+    Half Life test from the Ornstein-Uhlenbeck process 
+    Source: http://www.pythonforfinance.net/2016/05/09/python-backtesting-mean-reversion-part-2/
+    """
 
     def __init__(self):
         self.hl_min = 1.0
@@ -84,8 +85,10 @@ class Half_Life(object):
 
 
 class Hurst():
-    """If Hurst Exponent is under the 0.5 value of a random walk, then the series is mean reverting
-    https://www.quantstart.com/articles/Basics-of-Statistical-Mean-Reversion-Testing"""
+    """
+    If Hurst Exponent is under the 0.5 value of a random walk, then the series is mean reverting
+    Source: https://www.quantstart.com/articles/Basics-of-Statistical-Mean-Reversion-Testing
+    """
 
     def __init__(self):
         self.h_min = 0.0
@@ -112,9 +115,9 @@ class Hurst():
     def use(self):
         return (self.h_value < self.h_max) and (self.h_value > self.h_min)
 
-
-# Look into using Kalman Filter to calculate the hedge ratio
+# ~~~~~~~~~~~~~~~~~~~~~~ FUNCTIONS FOR FILING AN ORDER ~~~~~~~~~~~~~~~~~~~~~~
 def hedge_ratio(Y, X):
+    # Look into using Kalman Filter to calculate the hedge ratio
     X = sm.add_constant(X)
     model = sm.OLS(Y, X).fit()
     return model.params[1]
@@ -122,10 +125,6 @@ def hedge_ratio(Y, X):
 def softmax_order(stock_1_shares, stock_2_shares, stock_1_price, stock_2_price):
     stock_1_cost = stock_1_shares * stock_1_price
     stock_2_cost = stock_2_shares * stock_2_price
-    #total_cost = abs(stock_1_cost) + abs(stock_2_cost)
-    #stock_1_perc = stock_1_cost / total_cost
-    #stock_2_perc = stock_2_cost / total_cost
-    #return (stock_1_perc, stock_2_perc)
     costs = np.array([stock_1_cost, stock_2_cost])
     return np.exp(costs) / np.sum(np.exp(costs), axis=0)
 
@@ -133,19 +132,19 @@ def initialize(context):
     """
     Called once at the start of the algorithm.
     """
+    
     context.asset_pairs = [[symbol('MSFT'), symbol('AAPL'), {'in_short': False, 'in_long': False, 'spread': np.array([]), 'hedge_history': np.array([])}], 
                            [symbol('YUM'), symbol('MCD'), {'in_short': False, 'in_long': False, 'spread': np.array([]), 'hedge_history': np.array([])}]]
-                           #[symbol('USO'), symbol('GLD'), {'in_short': False, 'in_long': False, 'spread': np.array([]), 'hedge_history': np.array([])}]]
     context.lookback = 20
     context.z_back = 20
     context.hedge_lag = 2
     context.in_short = False
     context.in_long = False
     context.entry_z = 0.5
-
-    schedule_function(my_handle_data, date_rules.every_day(),
-                      time_rules.market_close(hours=1))
     
+    schedule_function(my_handle_data, date_rules.every_day(),
+                      time_rules.market_close(hours=3))
+    # Typical slippage and commision I have seen others use and is used in templates by Quantopian
     set_slippage(slippage.VolumeShareSlippage(volume_limit=0.025, price_impact=0.1))
     set_commission(commission.PerShare(cost=0.0075, min_trade_cost=0.0))
 
@@ -154,6 +153,7 @@ def my_handle_data(context, data):
     """
     Called every day.
     """
+    
     if get_open_orders():
         return
     
@@ -163,13 +163,16 @@ def my_handle_data(context, data):
         context.asset_pairs[i] = new_pair
 
 def process_pair(pair, context, data):
+    """
+    Main function that will execute an order for every pair.
+    """
+    
     # Get stock data
     stock_1 = pair[0]
     stock_2 = pair[1]
     prices = data.history([stock_1, stock_2], "price", 300, "1d")
     stock_1_P = prices[stock_1]
     stock_2_P = prices[stock_2]
-    
     in_short = pair[2]['in_short']
     in_long = pair[2]['in_long']
     spread = pair[2]['spread']
@@ -183,12 +186,11 @@ def process_pair(pair, context, data):
         return [stock_1, stock_2, {'in_short': in_short, 'in_long': in_long, 'spread': spread, 'hedge_history': hedge_history}]
     
     hedge_history = np.append(hedge_history, hedge)
-    # Wait until a day has passed
+    
     if hedge_history.size < context.hedge_lag:
-        log.debug("hedge history too short!")
+        log.debug("Hedge history too short!")
         return [stock_1, stock_2, {'in_short': in_short, 'in_long': in_long, 'spread': spread, 'hedge_history': hedge_history}]
 
-    # May need to switch stock_1/stock_2 places...95% sure this is the correct spread calculation
     hedge = hedge_history[-context.hedge_lag]
     spread = np.append(
         spread, stock_1_P[-1] - hedge * stock_2_P[-1])
@@ -198,21 +200,21 @@ def process_pair(pair, context, data):
     half_life = Half_Life()
     hurst = Hurst()
 
-    # Check if current window size is large enough for adf and z score
+    # Check if current window size is large enough for adf, half life, and hurst exponent
     if (spread_length < adf.look_back) or (spread_length < half_life.look_back) or (spread_length < hurst.look_back):
         return [stock_1, stock_2, {'in_short': in_short, 'in_long': in_long, 'spread': spread, 'hedge_history': hedge_history}]
 
+    
     # possible "SVD did not converge" error because of OLS
     try:
         adf.apply_adf(spread[-adf.look_back:])
         half_life.apply_half_life(spread[-half_life.look_back:])
         hurst.apply_hurst(spread[-hurst.look_back:])
     except:
-        #log.error(e)
         return [stock_1, stock_2, {'in_short': in_short, 'in_long': in_long, 'spread': spread, 'hedge_history': hedge_history}]
 
     # Check if they are in fact a stationary (or possibly trend stationary...need to avoid this) time series
-    # Only cancel if all measures believe it isn't stationary
+    # * Only cancel if all measures believe it isn't stationary
     if not adf.use_P() and not adf.use_critical() and not half_life.use() and not hurst.use():
         if in_short or in_long:
             # Enter logic here for how to handle open positions after mean reversion
@@ -225,7 +227,8 @@ def process_pair(pair, context, data):
             
         log.debug("Not Stationary!")
         return [stock_1, stock_2, {'in_short': in_short, 'in_long': in_long, 'spread': spread, 'hedge_history': hedge_history}]
-
+	
+    # Check if current window size is large enough for Z score
     if spread_length < context.z_back:
         return [stock_1, stock_2, {'in_short': in_short, 'in_long': in_long, 'spread': spread, 'hedge_history': hedge_history}]
 
@@ -265,7 +268,6 @@ def process_pair(pair, context, data):
         order_target_percent(stock_2, stock_2_perc)
         return [stock_1, stock_2, {'in_short': in_short, 'in_long': in_long, 'spread': spread, 'hedge_history': hedge_history}]
     elif z_score > context.entry_z and (not in_short):
-        # Only trade if NOT already in a trade
         stock_1_shares = -1
         stock_2_shares = hedge
         in_short = True
