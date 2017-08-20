@@ -15,14 +15,14 @@ Currently, my implementation will be able to run on arbitrary amount of possible
 
 Since I've been fascinated with the 2008 Recession, I wanted to see how my algorithm did during the year leading up to and several years following it. So I had it run for 6 years from January 1, 2007 to December 31, 2012. However, I'm planning on seeing how extensible my algorithm is to different time periods and different combination of pairs. From the few tests I have done so far, this seems true and I haven't "overfitted" my algorithm by making it only work in a specific instance.
 
-As my current results stand, I did 1,187.7% better than the defualt Quantopian benchmark, the SPDR S&P 500 Trust ETF ([SPY](http://www.google.ca/finance?q=SPY&ei=7z6ZWYiaLo2gjAGFs4OYAg)) with a 1201.2% return:
+As my current results stand, I did **1,187.7%** better than the defualt Quantopian benchmark, the SPDR S&P 500 Trust ETF ([SPY](http://www.google.ca/finance?q=SPY&ei=7z6ZWYiaLo2gjAGFs4OYAg)) with a **1201.2%** return:
 
-* Week of December 31, 2007: 52.22%
-* Week of December 28, 2008: 15.07%
-* Week of December 28, 2009: 277.82%
-* Week of December 27, 2010: 542.92%
-* Week of December 26, 2011: 874.62%
-* Week of December 31, 2012: 1201.2%
+* Week of December 31, 2007: **52.22%**
+* Week of December 28, 2008: **15.07%**
+* Week of December 28, 2009: **277.82%**
+* Week of December 27, 2010: **542.92%**
+* Week of December 26, 2011: **874.62%**
+* Week of December 31, 2012: **1201.2%**
 
 ## Issues
 * Quantopian has deprecated version of Statsmodels python library which doesn't have the KPSS test available. I'll need to manually add it myself.
