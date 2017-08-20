@@ -202,7 +202,6 @@ def process_pair(pair, context, data):
     if (spread_length < adf.look_back) or (spread_length < half_life.look_back) or (spread_length < hurst.look_back):
         return [stock_1, stock_2, {'in_short': in_short, 'in_long': in_long, 'spread': spread, 'hedge_history': hedge_history}]
 
-    
     # possible "SVD did not converge" error because of OLS
     try:
         adf.apply_adf(spread[-adf.look_back:])
