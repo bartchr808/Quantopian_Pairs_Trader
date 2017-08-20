@@ -9,6 +9,8 @@ This is my implementation of a Pairs Trading Algorithm on the algorithmic tradin
 * [Softmax function](https://en.wikipedia.org/wiki/Softmax_function) for calculating percent of each security on open order
 
 ## Current Results
+![Current Results Graph](https://raw.githubusercontent.com/bartchr808/Quantopian_Pairs_Trader/master/current_results.png "Current Results Graph")
+
 Currently, my implementation will be able to run on arbitrary amount of possible pairs that a user could provide. However, for current testing purposes, I have only been testing on two possible pairs (and hardcoded some logic that assumes that such as how I record values on the graph). Those two pairs are Microsoft ([MSFT](http://www.google.ca/finance?q=MSFT&ei=FD-ZWcHDKNHejAHt4p-IBA)) + Apple ([AAPL](http://www.google.ca/finance?q=AAPL&ei=-T6ZWaGkKIaO2AbyxbCIBQ)), and McDonalds ([MCD](http://www.google.ca/finance?q=MCD&ei=LT-ZWbHmLIaO2AbyxbCIBQ)) + Yum! Brands ([YUM](http://www.google.ca/finance?q=YUM&ei=PT-ZWcnHCsK42Aac35GoCQ)) which owns chains like KFC, Pizza Hut, and Taco Bell. The former can be seen in the lower graph with the label "_tech" and the latter with the label "_food" with corresponding Z and hedge ratio values.
 
 Since I've been fascinated with the 2008 Recession, I wanted to see how my algorithm did during the year leading up to and several years following it. So I had it run for 6 years from January 1, 2007 to December 31, 2012. However, I'm planning on seeing how extensible my algorithm is to different time periods and different combination of pairs. From the few tests I have done so far, this seems true and I haven't "overfitted" my algorithm by making it only work in a specific instance.
