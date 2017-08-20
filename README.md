@@ -13,7 +13,7 @@ Currently, my implementation will be able to run on arbitrary amount of possible
 
 ![Current Results Graph](https://raw.githubusercontent.com/bartchr808/Quantopian_Pairs_Trader/master/current_results.png "Current Results Graph")
 
-I had my algorithm run for 13 years from January 1, 2004 to December 31, 2016. However, I'm planning on seeing how extensible my algorithm is to different time periods and different combination of pairs. From the few tests I have done so far, this seems true and I haven't "overfitted" my algorithm by making it only work in a specific instance.
+I had my algorithm run for 13 years from January 1, 2004 to January 1, 2017. However, I'm planning on seeing how extensible my algorithm is to different time periods and different combination of pairs. From the few tests I have done so far, this seems true and I haven't "overfitted" my algorithm by making it only work in a specific instance.
 
 As my current results stand, I did **10,498.24%** better than the defualt Quantopian benchmark, the SPDR S&P 500 Trust ETF ([SPY](http://www.google.ca/finance?q=SPY&ei=7z6ZWYiaLo2gjAGFs4OYAg)) (103.76%), and **10,510.59%** better than the DOW (91.41%), with a **10,602%** return.
 
