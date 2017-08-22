@@ -15,20 +15,20 @@ class ADF(object):
         self.five_perc_stat = None
         self.perc_stat = None
         self.p_min = .0
-        self.p_max = .2
+        self.p_max = .05
         self.look_back = 63
 
     def apply_adf(self, time_series):
         model = ts.adfuller(time_series, 1)
         self.p_value = model[1]
-        self.five_perc_stat = model[4]['10%']
+        self.five_perc_stat = model[4]['5%']
         self.perc_stat = model[0]
 
     def use_P(self):
         return (self.p_value > self.p_min) and (self.p_value < self.p_max)
     
     def use_critical(self):
-        return self.perc_stat > self.five_perc_stat
+        return abs(self.perc_stat) > abs(self.five_perc_stat)
 
 
 """  
@@ -94,23 +94,22 @@ class Hurst():
         self.h_min = 0.0
         self.h_max = 0.4
         self.look_back = 126
+        self.lag_max = 100
         self.h_value = None
+    
+    def apply_hurst(self, time_series):
+        """Returns the Hurst Exponent of the time series vector ts"""
+        # Create the range of lag values
+        lags = range(2, self.lag_max)
 
-    def apply_hurst(self, time_series):  
-        tau = []
-        lagvec = []  
-        #  Step through the different lags  
-        for lag in range(2, 20):  
-            #  produce price difference with lag  
-            pp = np.subtract(time_series[lag:], time_series[:-lag])  
-            #  Write the different lags into a vector  
-            lagvec.append(lag)  
-            #  Calculate the variance of the differnce vector  
-            tau.append(np.sqrt(np.std(pp)))  
-        #  linear fit to double-log graph (gives power)  
-        m = np.polyfit(np.log10(lagvec), np.log10(tau), 1)  
-        # calculate hurst  
-        self.h_value = m[0]*2   
+        # Calculate the array of the variances of the lagged differences
+        tau = [np.sqrt(np.std(np.subtract(time_series[lag:], time_series[:-lag]))) for lag in lags]
+
+        # Use a linear fit to estimate the Hurst Exponent
+        poly = np.polyfit(np.log10(lags), np.log10(tau), 1)
+
+        # Return the Hurst exponent from the polyfit output
+        self.h_value = poly[0]*2.0 
 
     def use(self):
         return (self.h_value < self.h_max) and (self.h_value > self.h_min)
@@ -135,11 +134,8 @@ def initialize(context):
     
     context.asset_pairs = [[symbol('MSFT'), symbol('AAPL'), {'in_short': False, 'in_long': False, 'spread': np.array([]), 'hedge_history': np.array([])}], 
                            [symbol('YUM'), symbol('MCD'), {'in_short': False, 'in_long': False, 'spread': np.array([]), 'hedge_history': np.array([])}]]
-    context.lookback = 20
     context.z_back = 20
     context.hedge_lag = 2
-    context.in_short = False
-    context.in_long = False
     context.entry_z = 0.5
     
     schedule_function(my_handle_data, date_rules.every_day(),
@@ -227,7 +223,7 @@ def process_pair(pair, context, data):
             
         log.debug("Not Stationary!")
         return [stock_1, stock_2, {'in_short': in_short, 'in_long': in_long, 'spread': spread, 'hedge_history': hedge_history}]
-	
+    
     # Check if current window size is large enough for Z score
     if spread_length < context.z_back:
         return [stock_1, stock_2, {'in_short': in_short, 'in_long': in_long, 'spread': spread, 'hedge_history': hedge_history}]
