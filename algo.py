@@ -63,7 +63,7 @@ class Half_Life(object):
     def __init__(self):
         self.hl_min = 1.0
         self.hl_max = 42.0
-        self.look_back = 126
+        self.look_back = 44
         self.half_life = None
 
     def apply_half_life(self, time_series):
@@ -116,7 +116,6 @@ class Hurst():
 
 # ~~~~~~~~~~~~~~~~~~~~~~ FUNCTIONS FOR FILING AN ORDER ~~~~~~~~~~~~~~~~~~~~~~
 def hedge_ratio(Y, X):
-    # Look into using Kalman Filter to calculate the hedge ratio
     X = sm.add_constant(X)
     model = sm.OLS(Y, X).fit()
     return model.params[1]
@@ -139,7 +138,7 @@ def initialize(context):
     context.entry_z = 0.5
     
     schedule_function(my_handle_data, date_rules.every_day(),
-                      time_rules.market_close(hours=3))
+                      time_rules.market_close(hours=4))
     # Typical slippage and commision I have seen others use and is used in templates by Quantopian
     set_slippage(slippage.VolumeShareSlippage(volume_limit=0.025, price_impact=0.1))
     set_commission(commission.PerShare(cost=0.0075, min_trade_cost=0.0))
@@ -174,12 +173,11 @@ def process_pair(pair, context, data):
     spread = pair[2]['spread']
     hedge_history = pair[2]['hedge_history']
 
-    # Get hedge ratio (look into using Kalman Filter)
     try:
         hedge = hedge_ratio(stock_1_P, stock_2_P)
     except ValueError as e:
         log.error(e)
-        return [stock_1, stock_2, {'in_short': in_short, 'in_long': in_long, 'spread': spread, 'hedge_history': hedge_history}]
+        return pair
     
     hedge_history = np.append(hedge_history, hedge)
     
@@ -188,8 +186,7 @@ def process_pair(pair, context, data):
         return [stock_1, stock_2, {'in_short': in_short, 'in_long': in_long, 'spread': spread, 'hedge_history': hedge_history}]
 
     hedge = hedge_history[-context.hedge_lag]
-    spread = np.append(
-        spread, stock_1_P[-1] - hedge * stock_2_P[-1])
+    spread = np.append(spread, stock_1_P[-1] - hedge * stock_2_P[-1])
     spread_length = spread.size
 
     adf = ADF()
@@ -200,7 +197,6 @@ def process_pair(pair, context, data):
     if (spread_length < adf.look_back) or (spread_length < half_life.look_back) or (spread_length < hurst.look_back):
         return [stock_1, stock_2, {'in_short': in_short, 'in_long': in_long, 'spread': spread, 'hedge_history': hedge_history}]
 
-    
     # possible "SVD did not converge" error because of OLS
     try:
         adf.apply_adf(spread[-adf.look_back:])
