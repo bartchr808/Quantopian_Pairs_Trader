@@ -142,7 +142,7 @@ def initialize(context):
                       time_rules.market_close(hours=4))
     # Typical slippage and commision I have seen others use and is used in templates by Quantopian
     set_slippage(slippage.VolumeShareSlippage(volume_limit=0.025, price_impact=0.1))
-    set_commission(commission.PerShare(cost=0.0075, min_trade_cost=0.0))
+    set_commission(commission.PerShare(cost=0.01, min_trade_cost=1.0))
 
 
 def my_handle_data(context, data):
