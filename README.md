@@ -1,5 +1,6 @@
 # Quantopian_Pairs_Trader
-Read me Medimum article [here](https://medium.com/@bart.chr/pairs-trading-for-algorithmic-trading-breakdown-d8b709f59372)
+Read my Medimum article about this project [here](https://medium.com/@bart.chr/pairs-trading-for-algorithmic-trading-breakdown-d8b709f59372)!
+
 This is my implementation of a Pairs Trading Algorithm on the algorithmic trading research/competition platform [Quantopian](https://www.quantopian.com/home) so I can dive deeper and learn more about [Pairs Trading](http://www.investopedia.com/university/guide-pairs-trading/) and implementing trading algorithms. Some tests/measures I'm currently learning about and using include:
 
 * Kwiatkowski-Phillips-Schmidt-Shin ([KPSS](https://en.wikipedia.org/wiki/KPSS_test)) stationarity test
