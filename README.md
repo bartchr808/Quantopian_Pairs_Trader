@@ -1,4 +1,5 @@
 # Quantopian_Pairs_Trader
+Read me Medimum article [here](https://medium.com/@bart.chr/pairs-trading-for-algorithmic-trading-breakdown-d8b709f59372)
 This is my implementation of a Pairs Trading Algorithm on the algorithmic trading research/competition platform [Quantopian](https://www.quantopian.com/home) so I can dive deeper and learn more about [Pairs Trading](http://www.investopedia.com/university/guide-pairs-trading/) and implementing trading algorithms. Some tests/measures I'm currently learning about and using include:
 
 * Kwiatkowski-Phillips-Schmidt-Shin ([KPSS](https://en.wikipedia.org/wiki/KPSS_test)) stationarity test
@@ -20,7 +21,8 @@ As my current results stand, I did **10,498.24%** better than the defualt Quanto
 -->
 
 ## Issues/Next Steps
+* Reduce the drawdown and beta and get the leveraging under control.
 * Quantopian has deprecated version of Statsmodels python library which doesn't have the KPSS test available. I'll need to manually add it myself.
 * Look into cleaning up how I'm currently returning a completely new pair object in `process_pair` and replacing the old pair in the for-loop in `my_handle_data`.
 * Haven't looked at using Kalman filters for determining hedge ratios. Not sure if I need to or if the way I did it sufficient.
-* Need to look into how Quantopian's `order_target_percent` function works when I have several different pairs and not one or two (e.g. will the first opening order take up my entire portfolio?) 
+* Need to look into how Quantopian's `order_target_percent` function works when I have several different pairs and not one or two (e.g. will the first opening order take up my entire portfolio?) .
